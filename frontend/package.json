@@ -9,17 +9,20 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@wagmi/connectors": "^5.1.12",
+    "@wagmi/core": "^2.14.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "@wagmi/core": "^2.14.1",
-    "@wagmi/connectors": "^5.1.12",
-    "viem": "^2.21.54",
+    "react-leaflet": "^5.0.0",
     "usehooks-ts": "^3.0.2",
-    "lucide-react": "^0.468.0"
+    "viem": "^2.21.54"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

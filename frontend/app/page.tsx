@@ -11,7 +11,12 @@ import {
   formatTimeRemaining,
 } from "./copilot";
 import { State } from "./contracts/types";
-import { Car, User, Star, Clock, AlertCircle, CheckCircle, Wallet, X } from "lucide-react";
+import { Car, User, Star, Clock, AlertCircle, CheckCircle, Wallet, X, MapPin } from "lucide-react";
+import dynamic from "next/dynamic";
+import type { SelectionMode } from "./components/Map";
+
+// Dynamically import MapWrapper with SSR disabled
+const MapWrapper = dynamic(() => import("./components/MapWrapper"), { ssr: false });
 
 type View = "home" | "myRides" | "availableRides" | "driverMode" | "registerDriver" | "requestRide" | "rideDetail";
 
@@ -58,6 +63,34 @@ export default function Home() {
 
   // Rating form
   const [rating, setRating] = useState(0);
+
+  // Map selection mode for picking locations
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(null);
+
+  // Handle map click to set location
+  const handleMapClick = useCallback((latitude: number, longitude: number) => {
+    if (selectionMode === "pickup") {
+      setNewRide({
+        ...newRide,
+        pickup: {
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+          address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+        },
+      });
+      setSelectionMode(null); // Reset after selection
+    } else if (selectionMode === "destination") {
+      setNewRide({
+        ...newRide,
+        destination: {
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+          address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+        },
+      });
+      setSelectionMode(null); // Reset after selection
+    }
+  }, [selectionMode, newRide]);
 
   // Refresh rides when connected
   const refreshRides = useCallback(async () => {
@@ -401,62 +434,151 @@ export default function Home() {
   }
 
   if (view === "requestRide") {
+    const hasPickup = newRide.pickup.latitude && newRide.pickup.longitude;
+    const hasDestination = newRide.destination.latitude && newRide.destination.longitude;
+    const canSubmit = hasPickup && hasDestination && newRide.amount;
+
     return (
       <div className="min-h-screen bg-background">
         <Header address={address!} balance={balance!} onDisconnect={disconnect} onBack={() => setView("home")} />
         <main className="max-w-2xl mx-auto p-6">
           <div className="bg-card rounded-lg p-6 border border-border">
             <h1 className="text-2xl font-semibold mb-6">Request a Ride</h1>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Pickup Address</label>
-                <input
-                  type="text"
-                  value={newRide.pickup.address}
-                  onChange={(e) =>
-                    setNewRide({
-                      ...newRide,
-                      pickup: { ...newRide.pickup, address: e.target.value },
-                    })
+
+            {/* Map with selection */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-muted-foreground">Click on the map to select locations</p>
+                {selectionMode && (
+                  <button
+                    onClick={() => setSelectionMode(null)}
+                    className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <X className="w-4 h-4" /> Cancel
+                  </button>
+                )}
+              </div>
+
+              {/* Selection buttons */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => setSelectionMode(selectionMode === "pickup" ? null : "pickup")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                    selectionMode === "pickup"
+                      ? "bg-green-500 text-white"
+                      : hasPickup
+                        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border border-green-300 dark:border-green-700"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  <MapPin className="w-4 h-4" />
+                  {hasPickup ? "Pickup Set" : "Set Pickup"}
+                </button>
+                <button
+                  onClick={() => setSelectionMode(selectionMode === "destination" ? null : "destination")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                    selectionMode === "destination"
+                      ? "bg-red-500 text-white"
+                      : hasDestination
+                        ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  <MapPin className="w-4 h-4" />
+                  {hasDestination ? "Destination Set" : "Set Destination"}
+                </button>
+              </div>
+
+              {/* Selection hint */}
+              {selectionMode && (
+                <div className={`text-sm py-2 px-3 rounded-lg mb-3 text-center ${
+                  selectionMode === "pickup"
+                    ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                    : "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                }`}>
+                  {selectionMode === "pickup" ? "📍 Click on the map to set pickup location" : "📍 Click on the map to set destination"}
+                </div>
+              )}
+
+              {/* Map */}
+              <div className="rounded-lg overflow-hidden border border-border">
+                <MapWrapper
+                  pickup={
+                    hasPickup
+                      ? {
+                          latitude: parseFloat(newRide.pickup.latitude),
+                          longitude: parseFloat(newRide.pickup.longitude),
+                          address: newRide.pickup.address,
+                        }
+                      : undefined
                   }
-                  placeholder="Enter pickup location"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Destination Address</label>
-                <input
-                  type="text"
-                  value={newRide.destination.address}
-                  onChange={(e) =>
-                    setNewRide({
-                      ...newRide,
-                      destination: { ...newRide.destination, address: e.target.value },
-                    })
+                  destination={
+                    hasDestination
+                      ? {
+                          latitude: parseFloat(newRide.destination.latitude),
+                          longitude: parseFloat(newRide.destination.longitude),
+                          address: newRide.destination.address,
+                        }
+                      : undefined
                   }
-                  placeholder="Enter destination"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                  selectionMode={selectionMode}
+                  onLocationSelect={handleMapClick}
+                  height="350px"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Fare (ETH)</label>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={newRide.amount}
-                  onChange={(e) => setNewRide({ ...newRide, amount: e.target.value })}
-                  placeholder="0.01"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <button
-                onClick={handleRequestRide}
-                disabled={loading || !newRide.pickup.address || !newRide.destination.address || !newRide.amount}
-                className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Requesting..." : "Request Ride"}
-              </button>
             </div>
+
+            {/* Selected locations display */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className={`p-3 rounded-lg border ${hasPickup ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800" : "bg-muted border-border"}`}>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Pickup</p>
+                {hasPickup ? (
+                  <>
+                    <p className="text-sm font-medium">{newRide.pickup.address || "Selected on map"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {parseFloat(newRide.pickup.latitude).toFixed(4)}, {parseFloat(newRide.pickup.longitude).toFixed(4)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not selected</p>
+                )}
+              </div>
+              <div className={`p-3 rounded-lg border ${hasDestination ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800" : "bg-muted border-border"}`}>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Destination</p>
+                {hasDestination ? (
+                  <>
+                    <p className="text-sm font-medium">{newRide.destination.address || "Selected on map"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {parseFloat(newRide.destination.latitude).toFixed(4)}, {parseFloat(newRide.destination.longitude).toFixed(4)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not selected</p>
+                )}
+              </div>
+            </div>
+
+            {/* Fare input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Fare (ETH)</label>
+              <input
+                type="number"
+                step="0.001"
+                value={newRide.amount}
+                onChange={(e) => setNewRide({ ...newRide, amount: e.target.value })}
+                placeholder="0.01"
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            {/* Submit button */}
+            <button
+              onClick={handleRequestRide}
+              disabled={loading || !canSubmit}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Requesting..." : "Request Ride"}
+            </button>
           </div>
         </main>
       </div>

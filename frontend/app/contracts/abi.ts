@@ -1,0 +1,353 @@
+// Minimal ABI for RideSharing contract
+export const RIDE_SHARING_ABI = [
+  // View Functions
+  {
+    inputs: [],
+    name: "rideCounter",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    name: "rides",
+    outputs: [
+      { internalType: "uint256", name: "id", type: "uint256" },
+      { internalType: "address payable", name: "rider", type: "address" },
+      { internalType: "address payable", name: "driver", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+      { internalType: "uint8", name: "state", type: "uint8" },
+      {
+        components: [
+          { internalType: "string", name: "latitude", type: "string" },
+          { internalType: "string", name: "longitude", type: "string" },
+          { internalType: "string", name: "address_", type: "string" },
+        ],
+        internalType: "struct RideSharing.Location",
+        name: "pickup",
+        type: "tuple",
+      },
+      {
+        components: [
+          { internalType: "string", name: "latitude", type: "string" },
+          { internalType: "string", name: "longitude", type: "string" },
+          { internalType: "string", name: "address_", type: "string" },
+        ],
+        internalType: "struct RideSharing.Location",
+        name: "destination",
+        type: "tuple",
+      },
+      { internalType: "uint256", name: "requestedAt", type: "uint256" },
+      { internalType: "uint256", name: "acceptedAt", type: "uint256" },
+      { internalType: "uint256", name: "fundedAt", type: "uint256" },
+      { internalType: "uint256", name: "startedAt", type: "uint256" },
+      { internalType: "uint256", name: "completedAt", type: "uint256" },
+      { internalType: "uint256", name: "finalizedAt", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "drivers",
+    outputs: [
+      { internalType: "bool", name: "isRegistered", type: "bool" },
+      { internalType: "uint256", name: "totalRating", type: "uint256" },
+      { internalType: "uint256", name: "ratingCount", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_driver", type: "address" }],
+    name: "getDriverRating",
+    outputs: [
+      { internalType: "bool", name: "isRegistered", type: "bool" },
+      { internalType: "uint256", name: "averageRating", type: "uint256" },
+      { internalType: "uint256", name: "ratingCount", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getRegisteredDrivers",
+    outputs: [{ internalType: "address[]", name: "", type: "address[]" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_driver", type: "address" }],
+    name: "isRegisteredDriver",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "getRide",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_rider", type: "address" }],
+    name: "getRiderRides",
+    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_driver", type: "address" }],
+    name: "getDriverRides",
+    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "getRideRating",
+    outputs: [
+      { internalType: "bool", name: "riderRatedDriver", type: "bool" },
+      { internalType: "bool", name: "driverRatedRider", type: "bool" },
+      { internalType: "uint8", name: "riderRating", type: "uint8" },
+      { internalType: "uint8", name: "driverRating", type: "uint8" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "getRefundStatus",
+    outputs: [
+      { internalType: "bool", name: "canRefund", type: "bool" },
+      { internalType: "uint256", name: "refundType", type: "uint256" },
+      { internalType: "uint256", name: "timeRemaining", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getContractBalance",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  // Write Functions
+  {
+    inputs: [{ internalType: "string", name: "_name", type: "string" }],
+    name: "registerDriver",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "string", name: "_pickupLat", type: "string" },
+      { internalType: "string", name: "_pickupLng", type: "string" },
+      { internalType: "string", name: "_pickupAddr", type: "string" },
+      { internalType: "string", name: "_destLat", type: "string" },
+      { internalType: "string", name: "_destLng", type: "string" },
+      { internalType: "string", name: "_destAddr", type: "string" },
+      { internalType: "uint256", name: "_amount", type: "uint256" },
+    ],
+    name: "requestRide",
+    outputs: [{ internalType: "uint256", name: "rideId", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "acceptRide",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "fundRide",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "startRide",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "completeRide",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "confirmArrival",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "_rideId", type: "uint256" },
+      { internalType: "string", name: "_reason", type: "string" },
+    ],
+    name: "cancelRide",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "claimRefundNotFunded",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_rideId", type: "uint256" }],
+    name: "claimRefundNotStarted",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "_rideId", type: "uint256" },
+      { internalType: "uint8", name: "_rating", type: "uint8" },
+    ],
+    name: "rateDriver",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "_rideId", type: "uint256" },
+      { internalType: "uint8", name: "_rating", type: "uint8" },
+    ],
+    name: "rateRider",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  // Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "driver", type: "address" },
+      { indexed: false, internalType: "string", name: "name", type: "string" },
+    ],
+    name: "DriverRegistered",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: true, internalType: "address", name: "rider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "RideRequested",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: true, internalType: "address", name: "driver", type: "address" },
+      { indexed: false, internalType: "uint256", name: "acceptedAt", type: "uint256" },
+    ],
+    name: "RideAccepted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "fundedAt", type: "uint256" },
+    ],
+    name: "RideFunded",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "timestamp", type: "uint256" },
+    ],
+    name: "RideStarted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "timestamp", type: "uint256" },
+    ],
+    name: "RideCompletedByDriver",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "RideFinalized",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: true, internalType: "address", name: "cancelledBy", type: "address" },
+      { indexed: false, internalType: "string", name: "reason", type: "string" },
+    ],
+    name: "RideCancelled",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: true, internalType: "address", name: "rider", type: "address" },
+      { indexed: false, internalType: "uint256", name: "amount", type: "uint256" },
+      { indexed: false, internalType: "string", name: "reason", type: "string" },
+    ],
+    name: "RideRefunded",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: true, internalType: "address", name: "driver", type: "address" },
+      { indexed: false, internalType: "uint8", name: "rating", type: "uint8" },
+      { indexed: false, internalType: "uint256", name: "newAverage", type: "uint256" },
+    ],
+    name: "DriverRated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "uint256", name: "rideId", type: "uint256" },
+      { indexed: true, internalType: "address", name: "rider", type: "address" },
+      { indexed: false, internalType: "uint8", name: "rating", type: "uint8" },
+      { indexed: false, internalType: "uint256", name: "newAverage", type: "uint256" },
+    ],
+    name: "RiderRated",
+    type: "event",
+  },
+] as const;
+
+// Constants
+export const ACCEPT_TIMEOUT = 15 * 60 * 1000; // 15 minutes in ms
+export const START_TIMEOUT = 30 * 60 * 1000; // 30 minutes in ms

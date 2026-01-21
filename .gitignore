@@ -47,3 +47,16 @@ lib/
 
 # OS
 Thumbs.db
+
+# Mobile
+*.apk
+*.ipa
+*.aab
+android/
+ios/
+mobile/
+capacitor/
+cordova/
+platforms/
+plugins/
+www/

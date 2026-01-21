@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWeb3, formatBalance, formatAddress, formatWei } from "./hooks";
 import { useContract } from "./hooks/useContract";
+import PWAInstaller from "./components/PWAInstaller";
 import {
   resolveRideState,
   getTimeRemaining,
@@ -1156,6 +1157,7 @@ function RideDetailView({
           )}
         </div>
       </main>
+      <PWAInstaller />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
 import { sepolia } from "viem/chains";
 
 // Contract address (replace with deployed address)
-export const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+export const CONTRACT_ADDRESS = "0xb034f1dB70db5183FEA06F17A5A2c459FEA05605" as Address;
 
 export function useWeb3() {
   const [publicClient, setPublicClient] = useState<PublicClient | null>(null);

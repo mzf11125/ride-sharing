@@ -84,12 +84,48 @@ export function useWeb3() {
     }
 
     try {
+      // Force MetaMask popup by requesting accounts
       const accounts = await (window as any).ethereum.request({
         method: "eth_requestAccounts",
       });
 
       if (accounts.length === 0) {
         throw new Error("No accounts found");
+      }
+
+      // Check and switch to Sepolia if needed
+      const chainIdHex = await (window as any).ethereum.request({
+        method: "eth_chainId",
+      });
+      const currentChainId = parseInt(chainIdHex, 16);
+
+      if (currentChainId !== 11155111) {
+        try {
+          await (window as any).ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: "0xaa36a7" }], // Sepolia
+          });
+        } catch (switchError: any) {
+          if (switchError.code === 4902) {
+            // Chain not added, add it
+            await (window as any).ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [{
+                chainId: "0xaa36a7",
+                chainName: "Sepolia Testnet",
+                nativeCurrency: {
+                  name: "ETH",
+                  symbol: "ETH",
+                  decimals: 18,
+                },
+                rpcUrls: ["https://sepolia.infura.io/v3/"],
+                blockExplorerUrls: ["https://sepolia.etherscan.io/"],
+              }],
+            });
+          } else {
+            throw switchError;
+          }
+        }
       }
 
       const client = createWalletClient({
@@ -100,12 +136,7 @@ export function useWeb3() {
       setWalletClient(client);
       setAddress(accounts[0] as Address);
       setIsConnected(true);
-
-      // Get chain ID
-      const chainIdHex = await (window as any).ethereum.request({
-        method: "eth_chainId",
-      });
-      setChainId(parseInt(chainIdHex, 16));
+      setChainId(11155111);
 
       return accounts[0] as Address;
     } catch (error) {

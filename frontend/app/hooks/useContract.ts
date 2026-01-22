@@ -519,6 +519,26 @@ export function useContract() {
     }
   }, [publicClient]);
 
+  // Get recent rides for marketplace (MVP approach)
+  const getRecentRides = useCallback(async (limit: number = 20): Promise<Ride[]> => {
+    if (!publicClient || rideCounter === BigInt(0)) return [];
+    
+    // Safety check for rideCounter
+    const max = Number(rideCounter);
+    if (max === 0) return [];
+    
+    const start = Math.max(1, max - limit + 1);
+    const end = max;
+    
+    const promises = [];
+    for (let i = end; i >= start; i--) {
+      promises.push(getRide(BigInt(i)));
+    }
+    
+    const rides = await Promise.all(promises);
+    return rides.filter((r): r is Ride => r !== null);
+  }, [publicClient, rideCounter, getRide]);
+
   return {
     rideCounter,
     isRegisteredDriver,
@@ -543,5 +563,7 @@ export function useContract() {
     getRideRating,
     getRefundStatus,
     getRegisteredDrivers,
+    getRecentRides,
   };
 }
+

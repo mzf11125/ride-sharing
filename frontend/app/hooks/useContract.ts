@@ -361,52 +361,54 @@ export function useContract() {
           abi: RIDE_SHARING_ABI,
           functionName: "getRide",
           args: [rideId],
-        }) as unknown as readonly [
-          bigint,           // id
-          `0x${string}`,    // rider
-          `0x${string}`,    // driver
-          bigint,           // amount
-          State,            // state
-          readonly [string, string, string], // pickup (lat, lng, address)
-          readonly [string, string, string], // destination (lat, lng, address)
-          bigint,           // requestedAt
-          bigint,           // acceptedAt
-          bigint,           // fundedAt
-          bigint,           // startedAt
-          bigint,           // completedAt
-          bigint,           // finalizedAt
-        ];
+        });
+        console.log("Raw rideData:", rideData);
 
-        const [
-          id,
-          rider,
-          driver,
-          amount,
-          state,
-          pickup,
-          destination,
-          requestedAt,
-          acceptedAt,
-          fundedAt,
-          startedAt,
-          completedAt,
-          finalizedAt,
-        ] = rideData;
+        const data = rideData as any;
 
+        
+        // Helper to extract location regardless of array/object structure
+        const extractLocation = (loc: any) => {
+          if (Array.isArray(loc)) {
+             return { latitude: loc[0], longitude: loc[1], address_: loc[2] };
+          }
+          return { latitude: loc.latitude, longitude: loc.longitude, address_: loc.address_ };
+        };
+
+        // If returned as an array (older viem or specific config)
+        if (Array.isArray(data)) {
+           return {
+            id: data[0],
+            rider: data[1],
+            driver: data[2],
+            amount: data[3],
+            state: data[4],
+            pickup: extractLocation(data[5]),
+            destination: extractLocation(data[6]),
+            requestedAt: data[7],
+            acceptedAt: data[8],
+            fundedAt: data[9],
+            startedAt: data[10],
+            completedAt: data[11],
+            finalizedAt: data[12],
+          };
+        }
+
+        // Return as object (standard for this version)
         return {
-          id,
-          rider,
-          driver,
-          amount,
-          state,
-          pickup: { latitude: pickup[0], longitude: pickup[1], address_: pickup[2] },
-          destination: { latitude: destination[0], longitude: destination[1], address_: destination[2] },
-          requestedAt,
-          acceptedAt,
-          fundedAt,
-          startedAt,
-          completedAt,
-          finalizedAt,
+          id: data.id,
+          rider: data.rider,
+          driver: data.driver,
+          amount: data.amount,
+          state: data.state,
+          pickup: extractLocation(data.pickup),
+          destination: extractLocation(data.destination),
+          requestedAt: data.requestedAt,
+          acceptedAt: data.acceptedAt,
+          fundedAt: data.fundedAt,
+          startedAt: data.startedAt,
+          completedAt: data.completedAt,
+          finalizedAt: data.finalizedAt,
         };
       } catch (error) {
         console.error("Failed to fetch ride:", error);

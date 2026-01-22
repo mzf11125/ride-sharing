@@ -124,18 +124,31 @@ export default function Home() {
     if (!isConnected || !address) return;
 
     try {
+      console.log("Refreshing rides for:", address);
       const riderRideIds = await getRiderRides(address);
       const driverRideIds = isRegisteredDriver ? await getDriverRides(address) : [];
+      console.log("Rider Ride IDs:", riderRideIds);
+      console.log("Driver Ride IDs:", driverRideIds);
+      
       const allRideIds = [...new Set([...riderRideIds, ...driverRideIds])];
+      console.log("All Ride IDs:", allRideIds);
 
       const ridesPromises = allRideIds.map(async (id) => {
-        const ride = await getRide(id);
-        const ratingData = await getRideRating(id);
-        return { ride, ratingData };
+        try {
+          const ride = await getRide(id);
+          const ratingData = await getRideRating(id);
+          console.log(`Fetched ride ${id}:`, ride);
+          return { ride, ratingData };
+        } catch (e) {
+          console.error(`Error fetching ride ${id}:`, e);
+          return { ride: null, ratingData: null };
+        }
       });
 
       const rides = await Promise.all(ridesPromises);
-      setMyRides(rides.filter((r) => r.ride !== null).reverse());
+      const validRides = rides.filter((r) => r.ride !== null).reverse();
+      console.log("Valid rides found:", validRides.length);
+      setMyRides(validRides);
     } catch (err) {
       console.error("Failed to fetch rides:", err);
     }

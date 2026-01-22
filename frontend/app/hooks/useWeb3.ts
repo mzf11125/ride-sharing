@@ -34,6 +34,49 @@ export function useWeb3() {
     setPublicClient(client);
   }, []);
 
+  // Check if wallet is already connected on page load
+  useEffect(() => {
+    if (typeof window === "undefined" || !(window as any).ethereum) return;
+
+    const checkConnection = async () => {
+      try {
+        // Use eth_accounts (doesn't prompt) to check if already connected
+        const accounts = await (window as any).ethereum.request({
+          method: "eth_accounts",
+        });
+
+        if (accounts && accounts.length > 0) {
+          // Get chain ID
+          const chainIdHex = await (window as any).ethereum.request({
+            method: "eth_chainId",
+          });
+          const currentChainId = parseInt(chainIdHex, 16);
+          setChainId(currentChainId);
+
+          // Only fully connect if on Sepolia
+          if (currentChainId === 11155111) {
+            const client = createWalletClient({
+              chain: sepolia,
+              transport: custom((window as any).ethereum),
+            });
+
+            setWalletClient(client);
+            setAddress(accounts[0] as Address);
+            setIsConnected(true);
+          } else {
+            // Set address but not fully connected - user needs to switch chains
+            setAddress(accounts[0] as Address);
+            console.warn("Connected to wrong network. Please switch to Sepolia (chain ID: 11155111). Current chain:", currentChainId);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check wallet connection:", error);
+      }
+    };
+
+    checkConnection();
+  }, []);
+
   // Connect wallet
   const connect = useCallback(async () => {
     if (typeof window === "undefined" || !(window as any).ethereum) {

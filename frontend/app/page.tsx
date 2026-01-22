@@ -19,7 +19,7 @@ const MapWrapper = dynamic(() => import("./components/MapWrapper"), { ssr: false
 type View = "home" | "myRides" | "availableRides" | "driverMode" | "registerDriver" | "requestRide" | "rideDetail";
 
 export default function Home() {
-  const { address, isConnected, balance, connect, disconnect } = useWeb3();
+  const { address, isConnected, balance, connect, disconnect, chainId } = useWeb3();
   const {
     isRegisteredDriver,
     isVerifiedDriver,
@@ -185,8 +185,19 @@ export default function Home() {
   const handleRequestRide = async () => {
     setError(null); setSuccess(null); setLoading(true);
     try {
+      // Ensure all values are strings for the contract call
       const amount = BigInt(Math.floor(parseFloat(newRide.amount) * 1e18));
-      const hash = await requestRide(newRide.pickup, newRide.destination, amount);
+      const pickupData = {
+        latitude: String(newRide.pickup.latitude),
+        longitude: String(newRide.pickup.longitude),
+        address: String(newRide.pickup.address),
+      };
+      const destData = {
+        latitude: String(newRide.destination.latitude),
+        longitude: String(newRide.destination.longitude),
+        address: String(newRide.destination.address),
+      };
+      const hash = await requestRide(pickupData, destData, amount);
       setSuccess(`Ride requested! Tx: ${hash.slice(0, 10)}...`);
       await refreshRides();
       setView("myRides");
@@ -337,6 +348,8 @@ export default function Home() {
         onViewChange={setView}
         onDisconnect={disconnect}
         myRidesCount={myRides.length}
+        chainId={chainId}
+        onConnect={handleConnect}
       />
     );
   }
@@ -347,64 +360,148 @@ export default function Home() {
         <Header address={address!} balance={balance!} onDisconnect={disconnect} onBack={() => setView("home")} />
         <main className="max-w-2xl mx-auto p-6">
           <div className="bg-card rounded-lg p-6 border border-border">
-            <h1 className="text-2xl font-semibold mb-6">Driver Dashboard</h1>
-            <div className="mb-8 p-4 bg-muted/30 rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Registration Status</span>
-                {isRegisteredDriver ? (
-                  <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-                    <CheckCircle className="w-4 h-4" /> Registered
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-muted-foreground text-sm">Not Registered</span>
-                )}
+            <h1 className="text-2xl font-semibold mb-2">Become a Driver</h1>
+            <p className="text-muted-foreground mb-6">Complete the registration and verification process to start earning.</p>
+            
+            {/* Progress Steps */}
+            <div className="flex items-center gap-2 mb-8">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${isRegisteredDriver ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'}`}>
+                {isRegisteredDriver ? <CheckCircle className="w-4 h-4" /> : '1'}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Identity Verification</span>
-                {isVerifiedDriver ? (
-                  <span className="flex items-center gap-1.5 text-blue-600 text-sm font-medium">
-                    <BadgeCheck className="w-4 h-4" /> Verified (zkPassport)
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-amber-600 text-sm">Pending Verification</span>
-                )}
+              <div className={`flex-1 h-1 rounded ${isRegisteredDriver ? 'bg-green-500' : 'bg-muted'}`} />
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${isVerifiedDriver ? 'bg-green-500 text-white' : isRegisteredDriver ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                {isVerifiedDriver ? <CheckCircle className="w-4 h-4" /> : '2'}
               </div>
             </div>
-            <div className="space-y-6">
+
+            {/* Step 1: Registration */}
+            <div className={`mb-6 p-5 rounded-xl border ${isRegisteredDriver ? 'border-green-200 bg-green-50/50' : 'border-border bg-muted/20'}`}>
+              <div className="flex items-start gap-3 mb-4">
+                <div className={`p-2 rounded-lg ${isRegisteredDriver ? 'bg-green-100' : 'bg-muted'}`}>
+                  <User className={`w-5 h-5 ${isRegisteredDriver ? 'text-green-600' : 'text-muted-foreground'}`} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">Step 1: Driver Registration</h3>
+                    {isRegisteredDriver && <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Completed</span>}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Register your wallet address as a driver on the blockchain.</p>
+                </div>
+              </div>
+              
               {!isRegisteredDriver && (
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium mb-2">Display Name</label>
+                <div className="space-y-3">
                   <input
                     type="text"
                     value={driverName}
                     onChange={(e) => setDriverName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Enter your display name"
+                    className="w-full px-4 py-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <button
                     onClick={handleRegisterDriver}
                     disabled={loading || !driverName}
-                    className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   >
-                    {loading ? "Registering..." : "Register"}
+                    {loading ? "Registering..." : "Register as Driver"}
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* Step 2: zkKYC Verification */}
+            <div className={`p-5 rounded-xl border ${isVerifiedDriver ? 'border-green-200 bg-green-50/50' : isRegisteredDriver ? 'border-blue-200 bg-blue-50/30' : 'border-border bg-muted/10 opacity-60'}`}>
+              <div className="flex items-start gap-3 mb-4">
+                <div className={`p-2 rounded-lg ${isVerifiedDriver ? 'bg-green-100' : isRegisteredDriver ? 'bg-blue-100' : 'bg-muted'}`}>
+                  <ShieldCheck className={`w-5 h-5 ${isVerifiedDriver ? 'text-green-600' : isRegisteredDriver ? 'text-blue-600' : 'text-muted-foreground'}`} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">Step 2: Identity Verification (zkKYC)</h3>
+                    {isVerifiedDriver && <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Verified</span>}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Verify your identity using zkPassport for privacy-preserving KYC.</p>
+                </div>
+              </div>
+
               {isRegisteredDriver && !isVerifiedDriver && (
-                <div className="pt-6 border-t border-border">
-                  <h3 className="font-medium mb-2">Verify Your Identity</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Connect your zkPassport to verify your identity.</p>
+                <div className="space-y-4">
+                  {/* What will be verified */}
+                  <div className="bg-white/50 rounded-lg p-4 border border-blue-100">
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <BadgeCheck className="w-4 h-4 text-blue-600" />
+                      What zkPassport Verifies
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span>You are a real person (liveness check)</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span>Nationality verification (passport country)</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        <span>Age verification (18+ requirement)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Privacy notice */}
+                  <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                    <p className="text-xs text-amber-700 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span><strong>Privacy-Preserving:</strong> zkPassport uses zero-knowledge proofs. Your personal data stays on your device – only the verification result is shared on-chain.</span>
+                    </p>
+                  </div>
+
                   <button
                     onClick={handleVerifyIdentity}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3.5 rounded-lg font-medium transition-all shadow-sm disabled:opacity-50"
                   >
                     <ShieldCheck className="w-5 h-5" />
                     {loading ? "Verifying..." : "Verify with zkPassport"}
                   </button>
                 </div>
               )}
+
+              {isVerifiedDriver && (
+                <div className="flex items-center gap-3 p-3 bg-green-100/50 rounded-lg">
+                  <BadgeCheck className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-800">Identity Verified</p>
+                    <p className="text-sm text-green-600">You are now a verified driver and can accept rides.</p>
+                  </div>
+                </div>
+              )}
+
+              {!isRegisteredDriver && (
+                <p className="text-sm text-muted-foreground text-center py-2">Complete Step 1 first to unlock verification.</p>
+              )}
             </div>
+
+            {/* Driver Stats (if fully verified) */}
+            {isRegisteredDriver && isVerifiedDriver && (
+              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                <h4 className="font-medium mb-3">Your Driver Stats</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <div className="flex items-center justify-center gap-1 text-yellow-500 mb-1">
+                      <Star className="w-5 h-5 fill-yellow-500" />
+                      <span className="text-xl font-bold">{driverRating.average > 0 ? (driverRating.average / 10).toFixed(1) : "N/A"}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Average Rating</p>
+                  </div>
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="text-xl font-bold">{driverRating.count}</p>
+                    <p className="text-xs text-muted-foreground">Total Ratings</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4" />{error}</div>}
             {success && <div className="mt-4 p-3 bg-green-50 text-green-600 rounded-lg text-sm flex items-center gap-2"><CheckCircle className="w-4 h-4" />{success}</div>}
           </div>
@@ -524,11 +621,27 @@ export default function Home() {
 
 // ============ Sub-Components ============
 
-function Dashboard({ address, balance, isRegisteredDriver, isVerifiedDriver, driverRating, onViewChange, onDisconnect, myRidesCount }: any) {
+function Dashboard({ address, balance, isRegisteredDriver, isVerifiedDriver, driverRating, onViewChange, onDisconnect, myRidesCount, chainId, onConnect }: any) {
+  const isWrongNetwork = chainId !== 11155111;
+  
   return (
     <div className="min-h-screen bg-background">
       <Header address={address} balance={balance} onDisconnect={onDisconnect} />
       <main className="max-w-4xl mx-auto p-6">
+        {isWrongNetwork && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-800">Wrong Network</p>
+                <p className="text-sm text-amber-600">Please switch to Sepolia Testnet to use this app.</p>
+              </div>
+            </div>
+            <button onClick={onConnect} className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">
+              Switch Network
+            </button>
+          </div>
+        )}
         <div className="bg-card rounded-xl p-6 border border-border mb-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center"><User className="w-6 h-6" /></div>
@@ -543,12 +656,12 @@ function Dashboard({ address, balance, isRegisteredDriver, isVerifiedDriver, dri
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <ActionButton icon={<Car className="w-6 h-6" />} title="Request Ride" description="Request a ride" onClick={() => onViewChange("requestRide")} />
-          <ActionButton icon={<Car className="w-6 h-6" />} title="My Rides" description={`${myRidesCount} rides`} onClick={() => onViewChange("myRides")} />
+          <ActionButton icon={<Car className="w-6 h-6" />} title="Request Ride" description="Request a ride" onClick={() => onViewChange("requestRide")} disabled={isWrongNetwork} />
+          <ActionButton icon={<Car className="w-6 h-6" />} title="My Rides" description={`${myRidesCount} rides`} onClick={() => onViewChange("myRides")} disabled={isWrongNetwork} />
           {!isRegisteredDriver ? (
-            <ActionButton icon={<User className="w-6 h-6" />} title="Become a Driver" description="Register to earn" onClick={() => onViewChange("registerDriver")} />
+            <ActionButton icon={<User className="w-6 h-6" />} title="Become a Driver" description="Register to earn" onClick={() => onViewChange("registerDriver")} disabled={isWrongNetwork} />
           ) : (
-            <div onClick={() => onViewChange("registerDriver")} className="bg-card rounded-xl p-6 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors">
+            <div onClick={() => !isWrongNetwork && onViewChange("registerDriver")} className={`bg-card rounded-xl p-6 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors ${isWrongNetwork ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <CheckCircle className="w-6 h-6 text-green-500" />
               <div><p className="font-medium">Driver Dashboard</p><p className="text-sm text-muted-foreground">{isVerifiedDriver ? "Verified & Ready" : "Verification Pending"}</p></div>
             </div>
@@ -559,9 +672,9 @@ function Dashboard({ address, balance, isRegisteredDriver, isVerifiedDriver, dri
   );
 }
 
-function ActionButton({ icon, title, description, onClick }: any) {
+function ActionButton({ icon, title, description, onClick, disabled }: any) {
   return (
-    <button onClick={onClick} className="bg-card rounded-xl p-6 border border-border text-left hover:border-primary transition-colors">
+    <button onClick={disabled ? undefined : onClick} disabled={disabled} className={`bg-card rounded-xl p-6 border border-border text-left hover:border-primary transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">{icon}</div>
         <div><h3 className="font-semibold text-lg">{title}</h3><p className="text-muted-foreground">{description}</p></div>
@@ -603,7 +716,7 @@ function MyRidesView({ address, balance, onDisconnect, rides, onSelectRide, onBa
 }
 
 function RideCard({ ride, ratingData, onClick }: any) {
-  const statusLabels: any = { [State.Requested]: "Requested", [State.Accepted]: "Accepted", [State.Funded]: "Funded", [State.Started]: "In Progress", [State.Completed]: "Completed", [State.Finalized]: "Finalized", [State.Cancelled]: "Cancelled", [State.Refunded]: "Refunded" };
+  const statusLabels: any = { [State.Requested]: "Requested", [State.Accepted]: "Accepted", [State.Funded]: "Funded", [State.Started]: "In Progress", [State.CompletedByDriver]: "Completed", [State.Finalized]: "Finalized", [State.Cancelled]: "Cancelled", [State.Refunded]: "Refunded" };
   return (
     <div onClick={onClick} className="bg-card p-4 rounded-xl border border-border hover:border-primary transition-all cursor-pointer shadow-sm">
       <div className="flex justify-between items-start mb-3">

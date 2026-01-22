@@ -10,6 +10,7 @@ export function useContract() {
   const { publicClient, walletClient, address, isConnected } = useWeb3();
   const [rideCounter, setRideCounter] = useState<bigint>(BigInt(0));
   const [isRegisteredDriver, setIsRegisteredDriver] = useState(false);
+  const [isVerifiedDriver, setIsVerifiedDriver] = useState(false);
   const [driverRating, setDriverRating] = useState<{ average: number; count: number }>({
     average: 0,
     count: 0,
@@ -55,7 +56,8 @@ export function useContract() {
           functionName: "getDriverRating",
           args: [address],
         });
-        const [, avgRating, count] = rating as [boolean, bigint, bigint];
+        const [, isVerified, avgRating, count] = rating as [boolean, boolean, bigint, bigint];
+        setIsVerifiedDriver(isVerified);
         setDriverRating({
           average: Number(avgRating) / 10,
           count: Number(count),
@@ -99,6 +101,36 @@ export function useContract() {
     },
     [walletClient, publicClient, address]
   );
+
+  // Verify Identity (Mock)
+  const verifyIdentity = useCallback(async () => {
+    if (!walletClient || !address) throw new Error("Wallet not connected");
+
+    const { request } = await publicClient!.simulateContract({
+      address: CONTRACT_ADDRESS,
+      abi: RIDE_SHARING_ABI,
+      functionName: "verifyIdentity",
+      args: [],
+      account: address,
+    });
+
+    const hash = await walletClient.writeContract(request);
+
+    // Wait for transaction
+    await publicClient!.waitForTransactionReceipt({ hash });
+
+    // Refresh state
+    const rating = await publicClient!.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: RIDE_SHARING_ABI,
+      functionName: "getDriverRating",
+      args: [address],
+    });
+    const [, isVerified] = rating as [boolean, boolean, bigint, bigint];
+    setIsVerifiedDriver(isVerified);
+
+    return hash;
+  }, [walletClient, publicClient, address]);
 
   // Request ride
   const requestRide = useCallback(
@@ -488,8 +520,10 @@ export function useContract() {
   return {
     rideCounter,
     isRegisteredDriver,
+    isVerifiedDriver,
     driverRating,
     registerDriver,
+    verifyIdentity,
     requestRide,
     acceptRide,
     fundRide,

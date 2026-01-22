@@ -35,6 +35,7 @@ export interface Ride {
 
 export interface Driver {
   isRegistered: boolean;
+  isVerified: boolean;
   totalRating: bigint;
   ratingCount: bigint;
   rideIds: bigint[];

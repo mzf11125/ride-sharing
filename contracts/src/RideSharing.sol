@@ -50,6 +50,7 @@ contract RideSharing {
 
     struct Driver {
         bool isRegistered;
+        bool isVerified;
         uint256 totalRating;
         uint256 ratingCount;
         uint256[] rideIds;
@@ -77,6 +78,7 @@ contract RideSharing {
 
     // ============ Events ============
     event DriverRegistered(address indexed driver, string name);
+    event DriverVerified(address indexed driver);
     event RideRequested(uint256 indexed rideId, address indexed rider, uint256 amount);
     event RideAccepted(uint256 indexed rideId, address indexed driver, uint256 acceptedAt);
     event RideFunded(uint256 indexed rideId, uint256 amount, uint256 fundedAt);
@@ -98,6 +100,7 @@ contract RideSharing {
     error RideNotFound();
     error DriverNotRegistered();
     error DriverAlreadyRegistered();
+    error DriverNotVerified();
     error InvalidRating(uint256 rating);
     error AlreadyRated();
     error RideNotFinalized();
@@ -133,6 +136,12 @@ contract RideSharing {
         _;
     }
 
+    modifier onlyVerifiedDriver() {
+        if (!drivers[msg.sender].isRegistered) revert DriverNotRegistered();
+        if (!drivers[msg.sender].isVerified) revert DriverNotVerified();
+        _;
+    }
+
     // ============ Driver Registry Functions ============
 
     /**
@@ -143,11 +152,24 @@ contract RideSharing {
         if (drivers[msg.sender].isRegistered) revert DriverAlreadyRegistered();
 
         drivers[msg.sender].isRegistered = true;
+        // isVerified defaults to false
         drivers[msg.sender].totalRating = 0;
         drivers[msg.sender].ratingCount = 0;
         driverAddresses.push(msg.sender);
 
         emit DriverRegistered(msg.sender, _name);
+    }
+
+    /**
+     * @notice Verify driver identity (Simulated zkPassport)
+     * @dev In production, this would accept and verify a ZK proof
+     */
+    function verifyIdentity() external {
+        if (!drivers[msg.sender].isRegistered) revert DriverNotRegistered();
+        
+        drivers[msg.sender].isVerified = true;
+        
+        emit DriverVerified(msg.sender);
     }
 
     /**
@@ -162,16 +184,18 @@ contract RideSharing {
      * @notice Get driver's rating information
      * @param _driver Driver address
      * @return isRegistered Whether the driver is registered
+     * @return isVerified Whether the driver has completed KYC
      * @return averageRating Average rating (scaled by 10 for precision, e.g., 45 = 4.5 stars)
      * @return ratingCount Total number of ratings
      */
     function getDriverRating(address _driver)
         external
         view
-        returns (bool isRegistered, uint256 averageRating, uint256 ratingCount)
+        returns (bool isRegistered, bool isVerified, uint256 averageRating, uint256 ratingCount)
     {
         Driver memory driver = drivers[_driver];
         isRegistered = driver.isRegistered;
+        isVerified = driver.isVerified;
         ratingCount = driver.ratingCount;
         if (driver.ratingCount > 0) {
             averageRating = (driver.totalRating * 10) / driver.ratingCount;

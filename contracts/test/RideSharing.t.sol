@@ -37,10 +37,11 @@ contract RideSharingTest is Test {
         vm.prank(newDriver);
         rideSharing.registerDriver("Alice");
 
-        (bool isRegistered, uint256 avgRating, uint256 count) =
+        (bool isRegistered, bool isVerified, uint256 avgRating, uint256 count) =
             rideSharing.getDriverRating(newDriver);
 
         assertTrue(isRegistered);
+        assertFalse(isVerified);
         assertEq(avgRating, 0);
         assertEq(count, 0);
     }
@@ -61,6 +62,23 @@ contract RideSharingTest is Test {
         assertEq(drivers.length, 2);
         assertEq(drivers[0], driver);
         assertEq(drivers[1], driver2);
+    }
+
+    // ============ KYC Tests ============
+
+    function test_VerifyIdentity() public {
+        vm.prank(driver);
+        rideSharing.verifyIdentity();
+
+        (bool isRegistered, bool isVerified,,) = rideSharing.getDriverRating(driver);
+        assertTrue(isRegistered);
+        assertTrue(isVerified);
+    }
+
+    function test_RevertVerifyIdentity_NotRegistered() public {
+        vm.prank(stranger);
+        vm.expectRevert(RideSharing.DriverNotRegistered.selector);
+        rideSharing.verifyIdentity();
     }
 
     function test_RevertAcceptRide_NotRegistered() public {
@@ -331,7 +349,7 @@ contract RideSharingTest is Test {
         assertEq(riderRating, 5);
         assertEq(driverRating, 0);
 
-        (bool isRegistered, uint256 avgRating, uint256 count) =
+        (bool isRegistered, bool isVerified, uint256 avgRating, uint256 count) =
             rideSharing.getDriverRating(driver);
         assertTrue(isRegistered);
         assertEq(avgRating, 50); // 5.0 * 10
@@ -348,7 +366,7 @@ contract RideSharingTest is Test {
         rideSharing.rateDriver(rideId2, 5);
         vm.stopPrank();
 
-        (bool isRegistered, uint256 avgRating, uint256 count) =
+        (bool isRegistered, bool isVerified, uint256 avgRating, uint256 count) =
             rideSharing.getDriverRating(driver);
         assertTrue(isRegistered);
         assertEq(avgRating, 45); // (4+5)/2 * 10 = 4.5 * 10 = 45

@@ -51,15 +51,62 @@ The core smart contract implements a state machine for ride lifecycle management
 
 #### State Machine
 
+```mermaid
+stateDiagram-v2
+    [*] --> Requested
+    Requested --> Accepted: Driver Accepts
+    Requested --> Cancelled: Cancelled
+    Accepted --> Funded: Rider Funds (Escrow)
+    Accepted --> Refunded: Timeout (15m)
+    Funded --> Started: Driver Starts
+    Funded --> Refunded: Timeout (30m)
+    Funded --> Cancelled: Cancelled (Refunded)
+    Started --> CompletedByDriver: Driver Completes
+    CompletedByDriver --> Finalized: Rider Confirms
+    Finalized --> [*]
+    Cancelled --> [*]
+    Refunded --> [*]
 ```
-                    Cancelled
-                        ^
-                        |
-Requested -> Accepted -> Funded -> Started -> CompletedByDriver -> Finalized
-    |          |          |          |
-    |          +----------+----------+
-    |                     |
-    +---------------------+----> Refunded (timeout)
+
+#### Interaction Flow
+
+```mermaid
+sequenceDiagram
+    actor Rider
+    participant Contract
+    actor Driver
+
+    Rider->>Contract: requestRide(...)
+    activate Contract
+    Contract-->>Rider: RideRequested
+    deactivate Contract
+
+    Driver->>Contract: acceptRide(rideId)
+    activate Contract
+    Contract-->>Driver: RideAccepted
+    deactivate Contract
+
+    Rider->>Contract: fundRide(rideId)
+    activate Contract
+    Note over Contract: Funds held in Escrow
+    Contract-->>Rider: RideFunded
+    deactivate Contract
+
+    Driver->>Contract: startRide(rideId)
+    activate Contract
+    Contract-->>Driver: RideStarted
+    deactivate Contract
+
+    Driver->>Contract: completeRide(rideId)
+    activate Contract
+    Contract-->>Driver: RideCompletedByDriver
+    deactivate Contract
+
+    Rider->>Contract: confirmArrival(rideId)
+    activate Contract
+    Contract-->>Driver: Transfers Payment
+    Contract-->>Rider: RideFinalized
+    deactivate Contract
 ```
 
 #### States
@@ -79,6 +126,7 @@ Requested -> Accepted -> Funded -> Started -> CompletedByDriver -> Finalized
 
 - **Escrow System**: Funds held securely until ride finalization
 - **Driver Registry**: Drivers register with name and build reputation
+- **Identity Verification**: Privacy-preserving driver verification using zkKYC (zkPassport)
 - **Rating System**: 1-5 star ratings (both rider and driver) after finalization
 - **Timeout Protection**: Auto-refund if funding/start deadlines exceeded
 - **State Transitions**: Modifiers enforce valid state changes
@@ -126,7 +174,14 @@ The frontend uses a **Copilot pattern** - intelligent modules that guide users t
 
 ### Copilot Modules
 
-#### 1. State Resolver (`stateResolver.ts`)
+#### 1. Identity Verification (zkKYC)
+
+The system simulates a **zkPassport** integration for driver verification. In a production environment, this ensures drivers are verified humans without revealing sensitive personal data on-chain.
+
+- **Function**: `verifyIdentity()`
+- **Mechanism**: Checks for valid registration and sets `isVerified` status. Future versions will verify Zero-Knowledge Proofs generated from passport data.
+
+#### 2. State Resolver (`stateResolver.ts`)
 
 Determines the current ride state and user's role:
 
@@ -252,7 +307,7 @@ forge install
 Update the contract address in `frontend/app/hooks/useWeb3.ts`:
 
 ```typescript
-export const CONTRACT_ADDRESS = "0x..." as Address; // Your deployed address
+export const CONTRACT_ADDRESS = "0x764b5563DdF36A507354C06fCA3b91A16f3bcb92" as Address; // Your deployed address
 ```
 
 ### Running Tests

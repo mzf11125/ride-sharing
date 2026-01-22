@@ -1,6 +1,6 @@
 # Decentralized Ride-Sharing DApp
 
-A decentralized ride-sharing application built on Ethereum with smart contract escrow functionality, driver registry, rating system, and timeout protections. The frontend uses a Copilot pattern for state-aware UI actions.
+A decentralized ride-sharing application built on Ethereum with smart contract escrow functionality, driver registry, rating system, and timeout protections. The frontend uses intelligent state-aware modules to guide user actions.
 
 ## Tech Stack
 
@@ -28,7 +28,7 @@ ride-sharing/
     │   ├── contracts/
     │   │   ├── types.ts         # TypeScript interfaces
     │   │   └── abi.ts           # Contract ABI & constants
-    │   ├── copilot/             # Copilot pattern modules
+    │   ├── copilot/             # Intelligent logic modules
     │   │   ├── stateResolver.ts # Determines ride state & user role
     │   │   ├── actionPolicy.ts  # Action permission logic
     │   │   ├── gasEstimator.ts  # Gas cost estimation
@@ -168,11 +168,11 @@ sequenceDiagram
 | `getDriverRides(address)` | All ride IDs for a driver |
 | `getRegisteredDrivers()` | List of all registered drivers |
 
-## Frontend Copilot Pattern
+## Frontend Architecture
 
-The frontend uses a **Copilot pattern** - intelligent modules that guide users through the ride flow by understanding context, state, and permissions.
+The frontend uses **Intelligent Context Modules** to guide users through the ride flow by understanding context, state, and permissions.
 
-### Copilot Modules
+### Core Logic Modules
 
 #### 1. Identity Verification (zkKYC)
 

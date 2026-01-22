@@ -43,6 +43,51 @@ ride-sharing/
     └── package.json
 ```
 
+## Application Flow
+
+The following diagram illustrates the complete user journey from wallet connection to ride finalization, including driver registration and the zkKYC verification process.
+
+```mermaid
+flowchart TD
+    Start([Start]) --> Connect[Connect Wallet]
+    Connect --> NetworkCheck{Sepolia Network?}
+    NetworkCheck -- No --> SwitchNetwork[Switch to Sepolia]
+    SwitchNetwork --> NetworkCheck
+    NetworkCheck -- Yes --> RoleSelect{Select Role}
+
+    %% Driver Flow
+    RoleSelect -- Driver --> IsRegistered{Registered?}
+    IsRegistered -- No --> Register[Register Name]
+    Register --> IsRegistered
+    IsRegistered -- Yes --> IsVerified{zkKYC Verified?}
+    IsVerified -- No --> zkKYC[Verify with zkPassport]
+    zkKYC --> IsVerified
+    IsVerified -- Yes --> DriverDash[Driver Dashboard]
+    DriverDash --> WaitRide[Wait for Ride Requests]
+    WaitRide --> AcceptRide[Accept Ride]
+
+    %% Rider Flow
+    RoleSelect -- Rider --> RiderDash[Rider Dashboard]
+    RiderDash --> SetPickup[Set Pickup & Destination]
+    SetPickup --> RequestRide[Request Ride]
+    RequestRide --> RideLifecycle
+
+    %% Shared Ride Lifecycle
+    AcceptRide --> RideLifecycle
+    RideLifecycle{Ride Lifecycle}
+    RideLifecycle --> FundRide[Rider Funds Escrow]
+    FundRide --> StartRide[Driver Starts Ride]
+    StartRide --> CompleteRide[Driver Completes Ride]
+    CompleteRide --> ConfirmArrival[Rider Confirms Arrival]
+    ConfirmArrival --> ReleasePayment[Payment Released to Driver]
+    ReleasePayment --> RateBoth[Mutual Rating System]
+    RateBoth --> End([End])
+
+    %% Error/Cancel Paths
+    RideLifecycle -.-> Cancelled[Cancelled/Refunded]
+    Cancelled --> End
+```
+
 ## Smart Contract Overview
 
 ### RideSharing.sol
@@ -111,16 +156,16 @@ sequenceDiagram
 
 #### States
 
-| State | Value | Description |
-|-------|-------|-------------|
-| `Requested` | 0 | Ride requested by rider, waiting for driver |
-| `Accepted` | 1 | Driver accepted, waiting for funding |
-| `Funded` | 2 | Funds in escrow, waiting for ride start |
-| `Started` | 3 | Ride in progress |
-| `CompletedByDriver` | 4 | Driver marked complete, waiting for rider confirmation |
-| `Finalized` | 5 | Ride complete, payment released |
-| `Cancelled` | 6 | Ride cancelled (refunded if not started) |
-| `Refunded` | 7 | Timeout refund processed |
+| State               | Value | Description                                            |
+| ------------------- | ----- | ------------------------------------------------------ |
+| `Requested`         | 0     | Ride requested by rider, waiting for driver            |
+| `Accepted`          | 1     | Driver accepted, waiting for funding                   |
+| `Funded`            | 2     | Funds in escrow, waiting for ride start                |
+| `Started`           | 3     | Ride in progress                                       |
+| `CompletedByDriver` | 4     | Driver marked complete, waiting for rider confirmation |
+| `Finalized`         | 5     | Ride complete, payment released                        |
+| `Cancelled`         | 6     | Ride cancelled (refunded if not started)               |
+| `Refunded`          | 7     | Timeout refund processed                               |
 
 #### Key Features
 
@@ -134,39 +179,39 @@ sequenceDiagram
 
 #### Timeout Constants
 
-| Constant | Duration | Trigger |
-|----------|----------|---------|
-| `ACCEPT_TIMEOUT` | 15 minutes | Must fund after acceptance |
-| `START_TIMEOUT` | 30 minutes | Driver must start after funding |
+| Constant         | Duration   | Trigger                         |
+| ---------------- | ---------- | ------------------------------- |
+| `ACCEPT_TIMEOUT` | 15 minutes | Must fund after acceptance      |
+| `START_TIMEOUT`  | 30 minutes | Driver must start after funding |
 
 #### Contract Functions
 
-| Function | Caller | Description |
-|----------|--------|-------------|
-| `registerDriver(string)` | Anyone | Register as driver with name |
-| `requestRide(...)` | Rider | Create a new ride request |
-| `acceptRide(uint256)` | Registered Driver | Accept a requested ride |
-| `fundRide(uint256)` | Rider | Deposit fare into escrow |
-| `startRide(uint256)` | Driver | Mark ride as started |
-| `completeRide(uint256)` | Driver | Mark ride as completed |
-| `confirmArrival(uint256)` | Rider | Confirm and release payment |
-| `cancelRide(uint256, string)` | Rider/Driver | Cancel ride |
-| `rateDriver(uint256, uint8)` | Rider | Rate driver (1-5, after finalization) |
-| `rateRider(uint256, uint8)` | Driver | Rate rider (1-5, after finalization) |
-| `claimRefundNotFunded(uint256)` | Rider | Claim timeout refund (accept -> fund) |
-| `claimRefundNotStarted(uint256)` | Driver | Claim timeout refund (fund -> start) |
+| Function                         | Caller            | Description                           |
+| -------------------------------- | ----------------- | ------------------------------------- |
+| `registerDriver(string)`         | Anyone            | Register as driver with name          |
+| `requestRide(...)`               | Rider             | Create a new ride request             |
+| `acceptRide(uint256)`            | Registered Driver | Accept a requested ride               |
+| `fundRide(uint256)`              | Rider             | Deposit fare into escrow              |
+| `startRide(uint256)`             | Driver            | Mark ride as started                  |
+| `completeRide(uint256)`          | Driver            | Mark ride as completed                |
+| `confirmArrival(uint256)`        | Rider             | Confirm and release payment           |
+| `cancelRide(uint256, string)`    | Rider/Driver      | Cancel ride                           |
+| `rateDriver(uint256, uint8)`     | Rider             | Rate driver (1-5, after finalization) |
+| `rateRider(uint256, uint8)`      | Driver            | Rate rider (1-5, after finalization)  |
+| `claimRefundNotFunded(uint256)`  | Rider             | Claim timeout refund (accept -> fund) |
+| `claimRefundNotStarted(uint256)` | Driver            | Claim timeout refund (fund -> start)  |
 
 #### View Functions
 
-| Function | Returns |
-|----------|---------|
-| `getRide(uint256)` | Full ride details |
-| `getDriver(address)` | Driver registration & rating info |
-| `getRideRating(uint256)` | Rating info for a ride |
+| Function                   | Returns                             |
+| -------------------------- | ----------------------------------- |
+| `getRide(uint256)`         | Full ride details                   |
+| `getDriver(address)`       | Driver registration & rating info   |
+| `getRideRating(uint256)`   | Rating info for a ride              |
 | `getRefundStatus(uint256)` | Refund eligibility & time remaining |
-| `getRiderRides(address)` | All ride IDs for a rider |
-| `getDriverRides(address)` | All ride IDs for a driver |
-| `getRegisteredDrivers()` | List of all registered drivers |
+| `getRiderRides(address)`   | All ride IDs for a rider            |
+| `getDriverRides(address)`  | All ride IDs for a driver           |
+| `getRegisteredDrivers()`   | List of all registered drivers      |
 
 ## Frontend Architecture
 
@@ -187,9 +232,9 @@ Determines the current ride state and user's role:
 
 ```typescript
 interface ResolvedState {
-  state: State;           // Current contract state
-  stateLabel: string;     // Human-readable label
-  userRole: UserRole;     // "rider" | "driver" | "stranger"
+  state: State; // Current contract state
+  stateLabel: string; // Human-readable label
+  userRole: UserRole; // "rider" | "driver" | "stranger"
   canCancel: boolean;
   canFund: boolean;
   canStart: boolean;
@@ -197,7 +242,7 @@ interface ResolvedState {
   canConfirm: boolean;
   canRateDriver: boolean;
   canRateRider: boolean;
-  nextAction: string;     // Contextual guidance
+  nextAction: string; // Contextual guidance
 }
 ```
 
@@ -208,7 +253,7 @@ Validates whether an action can be performed based on state, role, and condition
 ```typescript
 interface PolicyResult {
   allowed: boolean;
-  reason: string;         // Why allowed/blocked
+  reason: string; // Why allowed/blocked
 }
 ```
 
@@ -220,8 +265,8 @@ Estimates transaction costs before execution:
 interface GasEstimate {
   gasLimit: bigint;
   gasPrice: bigint;
-  ethCost: string;        // "0.000123"
-  usdCost: string;        // "0.37"
+  ethCost: string; // "0.000123"
+  usdCost: string; // "0.37"
 }
 ```
 
@@ -247,12 +292,12 @@ Manages wallet connection:
 
 ```typescript
 const {
-  address,           // Connected address
-  balance,           // ETH balance
+  address, // Connected address
+  balance, // ETH balance
   isConnected,
   chainId,
   connect,
-  disconnect
+  disconnect,
 } = useWeb3();
 ```
 
@@ -307,7 +352,8 @@ forge install
 Update the contract address in `frontend/app/hooks/useWeb3.ts`:
 
 ```typescript
-export const CONTRACT_ADDRESS = "0x764b5563DdF36A507354C06fCA3b91A16f3bcb92" as Address; // Your deployed address
+export const CONTRACT_ADDRESS =
+  "0x764b5563DdF36A507354C06fCA3b91A16f3bcb92" as Address; // Your deployed address
 ```
 
 ### Running Tests
@@ -354,13 +400,13 @@ The frontend uses an Uber-inspired minimalist design:
 
 ### Colors
 
-| Usage | Color | CSS |
-|-------|-------|-----|
-| Primary | Black | `#000000` |
-| Background | Off-white | `#F5F5F5` |
-| Card | White | `#FFFFFF` |
-| Border | Light gray | `#E0E0E0` |
-| Muted text | Gray | `#666666` |
+| Usage      | Color      | CSS       |
+| ---------- | ---------- | --------- |
+| Primary    | Black      | `#000000` |
+| Background | Off-white  | `#F5F5F5` |
+| Card       | White      | `#FFFFFF` |
+| Border     | Light gray | `#E0E0E0` |
+| Muted text | Gray       | `#666666` |
 
 ### Typography
 
